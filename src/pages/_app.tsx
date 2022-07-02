@@ -1,4 +1,6 @@
 import '~/css/global.scss'
+import '@exampledev/new.css'
+import '@exampledev/new.css/theme/night.css'
 
 import { NextComponentType, NextPageContext } from 'next'
 import { AppProps } from 'next/app'
