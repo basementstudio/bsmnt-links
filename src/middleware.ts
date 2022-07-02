@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export const config = {
-  matcher: '/'
+  matcher: ['/', '/api/shorten']
 }
 
 export function middleware(req: NextRequest) {

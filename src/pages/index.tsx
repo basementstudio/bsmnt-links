@@ -1,55 +1,83 @@
-import { useRouter } from 'next/router'
 import * as React from 'react'
 import useSWR from 'swr'
 
 import { siteURL } from '~/lib/constants'
+import { formatError } from '~/lib/utils'
 
 import { Page } from './_app'
 
-type LSLink = {
+export type LSLink = {
   key: string
   value: string
 }
 
 const HomePage: Page = () => {
-  const router = useRouter()
-  const { error, success: successData } = router.query
+  const [error, setError] = React.useState('')
+  const [successData, setSuccessData] =
+    React.useState<{ key: string; value: string }>()
+  const [loading, setLoading] = React.useState(false)
 
-  const { data: myShortLinks, mutate } = useSWR<LSLink[]>('/api/user', () => {
-    const myBsmntLinksLS = window.localStorage.getItem('my-bsmnt-links')
-    if (myBsmntLinksLS) {
-      return JSON.parse(myBsmntLinksLS) as LSLink[]
-    }
-    return []
-  })
-
-  const parsedSuccessData = React.useMemo(() => {
-    if (typeof successData !== 'string') return
-    try {
-      const parsed = JSON.parse(successData)
-
-      return {
-        key: parsed.key,
-        value: parsed.value
+  const { data: myShortLinks, mutate } = useSWR<LSLink[]>(
+    'my-bsmnt-links',
+    () => {
+      const myBsmntLinksLS = window.localStorage.getItem('my-bsmnt-links')
+      if (myBsmntLinksLS) {
+        return JSON.parse(myBsmntLinksLS) as LSLink[]
       }
-    } catch (error) {
-      return
+      return []
     }
-  }, [successData])
+  )
 
   React.useEffect(() => {
-    if (parsedSuccessData) {
+    if (successData) {
       const alreadyExists = myShortLinks?.some(
-        ({ key }) => key === parsedSuccessData.key
+        ({ key }) => key === successData.key
       )
       if (alreadyExists) return
       localStorage.setItem(
         'my-bsmnt-links',
-        JSON.stringify([parsedSuccessData, ...(myShortLinks ?? [])])
+        JSON.stringify([successData, ...(myShortLinks ?? [])])
       )
-      mutate([parsedSuccessData, ...(myShortLinks ?? [])])
+      mutate([successData, ...(myShortLinks ?? [])])
     }
-  }, [mutate, myShortLinks, parsedSuccessData])
+  }, [mutate, myShortLinks, successData])
+
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> =
+    React.useCallback(async (e) => {
+      e.preventDefault()
+      const formEl = e.currentTarget
+      setLoading(true)
+      try {
+        const res = await fetch('/api/shorten', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            url: formEl.url.value,
+            suggestion: formEl.suggestion.value
+          })
+        })
+
+        const { error, successData } = await res.json()
+
+        if (error) {
+          setError(error)
+          setSuccessData(undefined)
+        }
+        if (successData) {
+          setError('')
+          setSuccessData(successData)
+        }
+
+        formEl.reset()
+      } catch (error) {
+        setError(formatError(error).message)
+        setSuccessData(undefined)
+      } finally {
+        setLoading(false)
+      }
+    }, [])
 
   return (
     <div>
@@ -72,7 +100,7 @@ const HomePage: Page = () => {
         .
       </p>
       <br />
-      {parsedSuccessData && (
+      {successData && (
         <blockquote
           style={{
             position: 'relative',
@@ -86,11 +114,11 @@ const HomePage: Page = () => {
               <b>Success:</b> Created short link:{' '}
             </span>
             <a
-              href={siteURL.href + parsedSuccessData.key}
+              href={siteURL.href + successData.key}
               target="_blank"
               rel="noopener"
             >
-              {siteURL.href + parsedSuccessData.key}
+              {siteURL.href + successData.key}
             </a>
           </span>
           <button
@@ -102,7 +130,7 @@ const HomePage: Page = () => {
             }}
             onClick={() => {
               window.navigator.clipboard
-                .writeText(siteURL.href + parsedSuccessData.key)
+                .writeText(siteURL.href + successData.key)
                 .catch((e) => {
                   console.error(e)
                 })
@@ -118,7 +146,7 @@ const HomePage: Page = () => {
         </blockquote>
       )}
       <br />
-      <form action="/api/new" method="POST">
+      <form onSubmit={handleSubmit}>
         <h2>Enter a new URL to shorten</h2>
         <fieldset>
           <label htmlFor="url">
@@ -141,7 +169,9 @@ const HomePage: Page = () => {
           <br />
           <small>A suggestion for us to use as the ID.</small>
         </fieldset>
-        <button type="submit">Shorten</button>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Loading...' : 'Shorten'}
+        </button>
       </form>
       {myShortLinks && (
         <>

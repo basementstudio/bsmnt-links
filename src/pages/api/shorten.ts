@@ -1,9 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { redirect } from 'next/dist/server/api-utils'
 
+import { badRequest, internalServerError, success } from '~/lib/api-responses'
 import { siteURL } from '~/lib/constants'
 import { createShortLink } from '~/lib/redis'
-import { formatError } from '~/lib/utils'
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
   const { url: original, suggestion } = req.body
@@ -12,7 +11,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
     typeof original !== 'string' ||
     (suggestion && typeof suggestion !== 'string')
   ) {
-    redirect(res, `/?error=${encodeURIComponent('Invalid input.')}`)
+    badRequest(res, 'Invalid input.')
     return
   }
 
@@ -26,13 +25,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
       value: shortLink.value
     }
 
-    redirect(
-      res,
-      `/?success=${encodeURIComponent(JSON.stringify(successData))}`
-    )
+    success(res, { successData })
     return
   } catch (error) {
-    redirect(res, `/?error=${encodeURIComponent(formatError(error).message)}`)
+    internalServerError(res, error)
     return
   }
 }
