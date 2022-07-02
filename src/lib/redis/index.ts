@@ -17,7 +17,7 @@ export async function createShortLink(original: string, suggestion?: string) {
 
   if (suggestion) {
     redisUrlClone.pathname = `/get/${key}`
-    const redisRes = await fetch(redisUrlClone, {
+    const redisRes = await fetch(redisUrlClone.href, {
       headers: { Authorization: `Bearer ${redisReadToken}` }
     })
     const { result } = (await redisRes.json()) as { result: string }
@@ -28,7 +28,7 @@ export async function createShortLink(original: string, suggestion?: string) {
 
   redisUrlClone.pathname = `/set/${key}`
 
-  const redisRes = await fetch(redisUrlClone, {
+  const redisRes = await fetch(redisUrlClone.href, {
     method: 'POST',
     headers: { Authorization: `Bearer ${redisWriteToken}` },
     body: originalUrl.href
@@ -54,7 +54,7 @@ export async function getShortLinkValue(key: string) {
   const redisUrlClone = new URL(redisUrl)
   redisUrlClone.pathname = `/get/${key}`
 
-  const redisRes = await fetch(redisUrlClone, {
+  const redisRes = await fetch(redisUrlClone.href, {
     headers: { Authorization: `Bearer ${redisReadToken}` }
   })
 
