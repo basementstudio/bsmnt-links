@@ -15,6 +15,12 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   try {
     const shortLinkValue = await getShortLinkValue(key)
+
+    ctx.res.setHeader(
+      'Cache-Control',
+      `public, s-maxage=31536000, stale-while-revalidate`
+    )
+
     return {
       redirect: {
         destination: shortLinkValue,
