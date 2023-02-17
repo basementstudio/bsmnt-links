@@ -13,6 +13,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  const url = req.nextUrl
   const basicAuth = req.headers.get('authorization')
 
   if (basicAuth) {
@@ -24,10 +25,7 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  return NextResponse.next({
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="Secure Area"'
-    }
-  })
+  url.pathname = '/api/auth'
+
+  return NextResponse.rewrite(url)
 }
